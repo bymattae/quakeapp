@@ -1,10 +1,10 @@
-import { Anthropic } from '@anthropic-ai/sdk';
+import Replicate from 'replicate';
 import { StreamingTextResponse } from 'ai';
 import { Earthquake } from '@/lib/types';
 
-// Create a new Anthropic client with the API key
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || '',
+// Create a new Replicate client
+const replicate = new Replicate({
+  auth: process.env.REPLICATE_API_TOKEN || '',
 });
 
 export async function POST(req: Request) {
@@ -25,20 +25,31 @@ export async function POST(req: Request) {
 
     Keep the response concise and use simple language.`;
 
-    const response = await anthropic.messages.create({
-      messages: [{ role: 'user', content: prompt }],
-      model: 'claude-3-sonnet-20240229',
-      max_tokens: 300,
-      stream: true,
-    });
+    // Use Llama 2 model for analysis
+    const response = await replicate.run(
+      "meta/llama-2-70b-chat:02e509c789964a7ea8736978a43525956ef40397be9033abf9fd2badfe68c9e3",
+      {
+        input: {
+          prompt,
+          system_prompt: "You are a helpful seismologist explaining earthquakes to the general public in clear, simple terms.",
+          max_new_tokens: 300,
+          temperature: 0.7,
+          top_p: 0.9,
+          stream: true,
+        },
+      }
+    );
 
     // Convert the response to a readable stream
     const stream = new ReadableStream({
       async start(controller) {
-        for await (const chunk of response) {
-          if (chunk.type === 'content_block_delta' && 'text' in chunk.delta) {
-            controller.enqueue(chunk.delta.text);
-          }
+        if (!response || !Array.isArray(response)) {
+          controller.close();
+          return;
+        }
+
+        for (const chunk of response) {
+          controller.enqueue(chunk);
         }
         controller.close();
       },
