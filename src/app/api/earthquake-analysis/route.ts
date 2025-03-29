@@ -1,5 +1,5 @@
 import { Anthropic } from '@anthropic-ai/sdk';
-import { AnthropicStream, StreamingTextResponse } from 'ai';
+import { StreamingTextResponse } from 'ai';
 import { Earthquake } from '@/lib/types';
 
 // Create a new Anthropic client with the API key
@@ -32,10 +32,19 @@ export async function POST(req: Request) {
       stream: true,
     });
 
-    // Convert the response to a stream
-    const stream = AnthropicStream(response);
-    
-    // Return the stream
+    // Convert the response to a readable stream
+    const stream = new ReadableStream({
+      async start(controller) {
+        for await (const chunk of response) {
+          if (chunk.type === 'content_block_delta' && 'text' in chunk.delta) {
+            controller.enqueue(chunk.delta.text);
+          }
+        }
+        controller.close();
+      },
+    });
+
+    // Return the streaming response
     return new StreamingTextResponse(stream);
   } catch (error) {
     console.error('Error analyzing earthquake:', error);
