@@ -1,47 +1,44 @@
-import Link from "next/link";
+import EarthquakeList from '@/components/EarthquakeList';
 
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-8">
-      <div>
-        <h2 className="text-2xl font-semibold text-center border p-4 font-mono rounded-md">
-          Get started by choosing a template path from the /paths/ folder.
-        </h2>
-      </div>
-      <div>
-        <h1 className="text-6xl font-bold text-center">Make anything you imagine 🪄</h1>
-        <h2 className="text-2xl text-center font-light text-gray-500 pt-4">
-          This whole page will be replaced when you run your template path.
-        </h2>
-      </div>
-      <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="border rounded-lg p-6 hover:bg-gray-100 transition-colors">
-          <h3 className="text-xl font-semibold">AI Chat App</h3>
-          <p className="mt-2 text-sm text-gray-600">
-            An intelligent conversational app powered by AI models, featuring real-time responses
-            and seamless integration with Next.js and various AI providers.
+    <main className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-4xl mx-auto px-4">
+        <h1 className="text-4xl font-bold text-center mb-6">
+          🌍 Global Earthquake Monitor
+        </h1>
+        
+        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+          <h2 className="text-2xl font-semibold mb-4">About This Monitor</h2>
+          <p className="text-gray-700 mb-4">
+            Track significant earthquakes worldwide with magnitude 4.0 or greater from the past 7 days. 
+            Data updates every 5 minutes from the US Geological Survey (USGS).
           </p>
+          
+          <div className="bg-blue-50 border-l-4 border-blue-500 p-4">
+            <h3 className="font-semibold text-blue-800 mb-2">Understanding Earthquake Magnitudes</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h4 className="font-medium text-blue-700">Magnitude Scale:</h4>
+                <ul className="list-disc list-inside text-blue-700 space-y-1">
+                  <li>4.0-5.9: Light to Moderate</li>
+                  <li>6.0-6.9: Strong</li>
+                  <li>7.0+: Major</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-medium text-blue-700">What to Expect:</h4>
+                <ul className="list-disc list-inside text-blue-700 space-y-1">
+                  <li>🟢 Minor: Felt but rarely causes damage</li>
+                  <li>🟡 Moderate: May cause light damage</li>
+                  <li>🔴 Severe: Can cause serious damage</li>
+                </ul>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="border rounded-lg p-6 hover:bg-gray-100 transition-colors">
-          <h3 className="text-xl font-semibold">AI Image Generation App</h3>
-          <p className="mt-2 text-sm text-gray-600">
-            Create images from text prompts using AI, powered by the Replicate API and Next.js.
-          </p>
-        </div>
-        <div className="border rounded-lg p-6 hover:bg-gray-100 transition-colors">
-          <h3 className="text-xl font-semibold">Social Media App</h3>
-          <p className="mt-2 text-sm text-gray-600">
-            A feature-rich social platform with user profiles, posts, and interactions using
-            Firebase and Next.js.
-          </p>
-        </div>
-        <div className="border rounded-lg p-6 hover:bg-gray-100 transition-colors">
-          <h3 className="text-xl font-semibold">Voice Notes App</h3>
-          <p className="mt-2 text-sm text-gray-600">
-            A voice-based note-taking app with real-time transcription using Deepgram API, 
-            Firebase integration for storage, and a clean, simple interface built with Next.js.
-          </p>
-        </div>
+
+        <EarthquakeList />
       </div>
     </main>
   );
