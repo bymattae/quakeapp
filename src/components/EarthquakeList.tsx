@@ -13,16 +13,24 @@ export default function EarthquakeList() {
   const fetchEarthquakes = async () => {
     try {
       setLoading(true);
-      // Fetch earthquakes from the last 7 days with magnitude >= 4.0
-      const response = await fetch(
-        'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.0_week.geojson'
-      );
+      // Use our proxy API endpoint instead of calling USGS directly
+      const response = await fetch('/api/earthquakes');
       
       if (!response.ok) {
-        throw new Error('Failed to fetch earthquake data');
+        console.error('API Error:', {
+          status: response.status,
+          statusText: response.statusText,
+        });
+        throw new Error(`Failed to fetch earthquake data: ${response.statusText}`);
       }
 
       const data = await response.json();
+      
+      if (!data || !data.features) {
+        console.error('Invalid API response:', data);
+        throw new Error('Invalid earthquake data format');
+      }
+
       const transformedData = transformUSGSData(data);
       setEarthquakes(transformedData);
       setError(null);
@@ -53,6 +61,12 @@ export default function EarthquakeList() {
     return (
       <div className="text-red-500 text-center p-4 bg-red-50 rounded-lg">
         {error}
+        <button 
+          onClick={fetchEarthquakes}
+          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+        >
+          Try Again
+        </button>
       </div>
     );
   }
