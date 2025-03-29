@@ -13,15 +13,16 @@ export default function EarthquakeList() {
   const fetchEarthquakes = async () => {
     try {
       setLoading(true);
-      // Use our proxy API endpoint instead of calling USGS directly
       const response = await fetch('/api/earthquakes');
       
       if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
         console.error('API Error:', {
           status: response.status,
           statusText: response.statusText,
+          details: errorData,
         });
-        throw new Error(`Failed to fetch earthquake data: ${response.statusText}`);
+        throw new Error(errorData.details || `Failed to fetch earthquake data: ${response.statusText}`);
       }
 
       const data = await response.json();
@@ -31,12 +32,22 @@ export default function EarthquakeList() {
         throw new Error('Invalid earthquake data format');
       }
 
-      const transformedData = transformUSGSData(data);
+      // Transform and filter earthquakes with magnitude >= 4.0
+      const transformedData = transformUSGSData(data)
+        .filter(quake => quake.magnitude >= 4.0)
+        .sort((a, b) => b.magnitude - a.magnitude);
+
       setEarthquakes(transformedData);
       setError(null);
+
+      // Log success for monitoring
+      console.log('Successfully loaded earthquakes:', {
+        total: data.features.length,
+        filtered: transformedData.length,
+      });
     } catch (err) {
       console.error('Error fetching earthquakes:', err);
-      setError('Failed to load earthquake data. Please try again later.');
+      setError(err instanceof Error ? err.message : 'Failed to load earthquake data. Please try again later.');
     } finally {
       setLoading(false);
     }
@@ -60,7 +71,7 @@ export default function EarthquakeList() {
   if (error) {
     return (
       <div className="text-red-500 text-center p-4 bg-red-50 rounded-lg">
-        {error}
+        <p className="mb-2">{error}</p>
         <button 
           onClick={fetchEarthquakes}
           className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
@@ -74,11 +85,16 @@ export default function EarthquakeList() {
   return (
     <div className="space-y-4">
       {earthquakes.length === 0 ? (
-        <p className="text-center text-gray-500">No recent earthquakes found.</p>
+        <p className="text-center text-gray-500">No earthquakes found with magnitude 4.0 or greater in the past week.</p>
       ) : (
-        earthquakes.map((earthquake) => (
-          <EarthquakeCard key={earthquake.id} earthquake={earthquake} />
-        ))
+        <>
+          <p className="text-center text-gray-600 mb-4">
+            Showing {earthquakes.length} earthquakes with magnitude 4.0 or greater
+          </p>
+          {earthquakes.map((earthquake) => (
+            <EarthquakeCard key={earthquake.id} earthquake={earthquake} />
+          ))}
+        </>
       )}
     </div>
   );
