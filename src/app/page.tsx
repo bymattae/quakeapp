@@ -45,9 +45,9 @@ export default function Home() {
   const [selectedEarthquake, setSelectedEarthquake] = useState<Earthquake | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedSeverity, setSelectedSeverity] = useState('all');
-  const [selectedTimeRange, setSelectedTimeRange] = useState('7d');
+  const [selectedTimeRange, setSelectedTimeRange] = useState('1d');
   const [dateRange, setDateRange] = useState({
-    start: subDays(new Date(), 7).toISOString().split('T')[0],
+    start: subDays(new Date(), 1).toISOString().split('T')[0],
     end: new Date().toISOString().split('T')[0]
   });
 
@@ -78,6 +78,24 @@ export default function Home() {
   };
 
   const handleDateChange = (type: 'start' | 'end', value: string) => {
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    
+    // Prevent future dates
+    if (value > today) {
+      value = today;
+    }
+    
+    // If end date is before start date, adjust it
+    if (type === 'end' && value < dateRange.start) {
+      value = dateRange.start;
+    }
+    
+    // If start date is after end date, adjust it
+    if (type === 'start' && value > dateRange.end) {
+      value = dateRange.end;
+    }
+
     setSelectedTimeRange('custom');
     setDateRange(prev => ({ ...prev, [type]: value }));
   };
