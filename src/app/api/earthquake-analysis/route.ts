@@ -1,64 +1,123 @@
-import Replicate from 'replicate';
-import { StreamingTextResponse } from 'ai';
-import { Earthquake } from '@/lib/types';
+import { NextResponse } from 'next/server';
+import { Earthquake, EarthquakeAnalysis } from '@/lib/types';
 
-// Create a new Replicate client
-const replicate = new Replicate({
-  auth: process.env.REPLICATE_API_TOKEN || '',
-});
-
-export async function POST(req: Request) {
+export async function POST(request: Request) {
+  let earthquake: Earthquake | null = null;
+  
   try {
-    const { earthquake } = await req.json() as { earthquake: Earthquake };
-    
-    const prompt = `Analyze this earthquake data and provide a brief, clear explanation for the general public:
-    - Magnitude: ${earthquake.magnitude}
-    - Location: ${earthquake.location}
-    - Depth: ${earthquake.depth}km
-    - Time: ${earthquake.time}
+    const { earthquake: earthquakeData } = await request.json();
+    earthquake = earthquakeData;
 
-    Please explain:
-    1. What this means for people in the area
-    2. Basic context about why it happened
-    3. Whether it's an aftershock (if you can determine this)
-    4. Safety recommendations if needed
+    if (!earthquake) {
+      return NextResponse.json(
+        { error: 'Earthquake data is required' },
+        { status: 400 }
+      );
+    }
 
-    Keep the response concise and use simple language.`;
+    if (!process.env.OPENAI_API_KEY) {
+      console.error('OPENAI_API_KEY is not set');
+      return NextResponse.json(
+        { error: 'API configuration error' },
+        { status: 500 }
+      );
+    }
 
-    // Use Llama 2 model for analysis
-    const response = await replicate.run(
-      "meta/llama-2-70b-chat:02e509c789964a7ea8736978a43525956ef40397be9033abf9fd2badfe68c9e3",
-      {
-        input: {
-          prompt,
-          system_prompt: "You are a helpful seismologist explaining earthquakes to the general public in clear, simple terms.",
-          max_new_tokens: 300,
-          temperature: 0.7,
-          top_p: 0.9,
-          stream: true,
-        },
-      }
-    );
+    const prompt = `Analyze this earthquake event and provide a structured response:
+Location: ${earthquake.location}
+Magnitude: ${earthquake.magnitude}
+Depth: ${earthquake.depth} km
+Time: ${new Date(earthquake.time).toLocaleString()}
 
-    // Convert the response to a readable stream
-    const stream = new ReadableStream({
-      async start(controller) {
-        if (!response || !Array.isArray(response)) {
-          controller.close();
-          return;
-        }
+Please provide the following information in a structured format:
+1. How did this earthquake occur? (geological explanation)
+2. What areas were affected?
+3. Detailed information about the earthquake's characteristics and potential impact
+4. Analysis of impact on specific countries [Thailand, India]
+5. Analysis of impact on specific cities [Bangkok, Mumbai]
 
-        for (const chunk of response) {
-          controller.enqueue(chunk);
-        }
-        controller.close();
+Format the response in JSON with these fields:
+{
+  "cause": "explanation of how it occurred",
+  "affectedAreas": "general areas affected",
+  "details": "detailed characteristics",
+  "affectedCountries": [{"name": "country name", "impact": "impact description"}],
+  "affectedCities": [{"name": "city name", "impact": "impact description"}]
+}`;
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({
+        model: "gpt-4-turbo-preview",
+        messages: [
+          {
+            role: "system",
+            content: "You are a seismologist and geological expert. Analyze the earthquake data and provide detailed, accurate information in the requested JSON format. Focus on scientific accuracy and practical impact assessment."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 1000,
+        response_format: { type: "json_object" }
+      })
     });
 
-    // Return the streaming response
-    return new StreamingTextResponse(stream);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('OpenAI API error:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorData
+      });
+      throw new Error(`Failed to generate analysis: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    const analysis = result.choices[0].message.content;
+
+    if (!analysis) {
+      throw new Error('No analysis returned from API');
+    }
+
+    // Parse the response to ensure it's in the correct format
+    let parsedAnalysis: EarthquakeAnalysis;
+    try {
+      parsedAnalysis = JSON.parse(analysis);
+    } catch (error) {
+      console.error('Error parsing analysis:', error);
+      // Fallback structured format if parsing fails
+      parsedAnalysis = {
+        cause: "This earthquake occurred due to tectonic plate movements in the region.",
+        affectedAreas: "The earthquake affected the surrounding areas with varying intensities.",
+        details: `A magnitude ${earthquake.magnitude} earthquake occurred at a depth of ${earthquake.depth} km.`,
+        affectedCountries: [],
+        affectedCities: []
+      };
+    }
+
+    return NextResponse.json({ analysis: parsedAnalysis });
   } catch (error) {
     console.error('Error analyzing earthquake:', error);
-    return new Response('Error analyzing earthquake data', { status: 500 });
+    return NextResponse.json(
+      { 
+        error: 'Failed to analyze earthquake', 
+        details: error instanceof Error ? error.message : 'Unknown error',
+        fallback: earthquake ? {
+          cause: "This earthquake occurred due to tectonic plate movements in the region.",
+          affectedAreas: "The earthquake affected the surrounding areas with varying intensities.",
+          details: `A magnitude ${earthquake.magnitude} earthquake occurred at a depth of ${earthquake.depth} km.`,
+          affectedCountries: [],
+          affectedCities: []
+        } : null
+      },
+      { status: 500 }
+    );
   }
 } 

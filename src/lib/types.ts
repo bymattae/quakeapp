@@ -1,13 +1,38 @@
+export interface EarthquakeAnalysis {
+  cause: string;
+  affectedAreas: string;
+  details: string;
+  affectedCountries: {
+    name: string;
+    impact: string;
+  }[];
+  affectedCities: {
+    name: string;
+    impact: string;
+  }[];
+}
+
 export interface Earthquake {
   id: string;
   magnitude: number;
   location: string;
   time: string;
-  coordinates: [number, number];
+  coordinates: [number, number, number];
   depth: number;
-  severity: 'minor' | 'moderate' | 'severe';
-  aiSummary?: string;
-  affectedCities?: AffectedCity[];
+  significance: number;
+  tsunami: boolean;
+  felt: number | null;
+  cdi: number | null;
+  mmi: number | null;
+  alert: string | null;
+  severity?: 'minor' | 'moderate' | 'severe';
+  analysis?: EarthquakeAnalysis;
+  affectedCountries?: {
+    name: string;
+    code: string;
+    distance: number;
+    impact: 'High' | 'Medium' | 'Low';
+  }[];
 }
 
 export interface AffectedCity {
@@ -61,4 +86,24 @@ export interface EarthquakeResponse {
     };
     id: string;
   }[];
+}
+
+export interface USGSFeature {
+  type: string;
+  properties: {
+    mag: number;
+    place: string;
+    time: number;
+    sig: number;
+    tsunami: number;
+    felt: number | null;
+    cdi: number | null;
+    mmi: number | null;
+    alert: string | null;
+  };
+  geometry: {
+    type: string;
+    coordinates: [number, number, number];
+  };
+  id: string;
 } 
