@@ -36,6 +36,7 @@ export async function GET() {
     }
 
     const data: USGSResponse = await response.json();
+    console.log('Total earthquakes fetched:', data.features.length);
 
     // Transform and filter the earthquake data
     const earthquakes = data.features
@@ -63,14 +64,24 @@ export async function GET() {
 
         return earthquake;
       })
-      .filter((earthquake: Earthquake) => 
-        // Filter out micro-earthquakes and include only significant events
-        earthquake.magnitude >= 2.5 || 
-        earthquake.significance >= 50 ||
-        earthquake.tsunami ||
-        earthquake.alert ||
-        (earthquake.felt && earthquake.felt > 100)
-      )
+      .filter((earthquake: Earthquake) => {
+        // Log each earthquake's properties for debugging
+        console.log('Earthquake:', {
+          magnitude: earthquake.magnitude,
+          significance: earthquake.significance,
+          location: earthquake.location,
+          felt: earthquake.felt
+        });
+
+        // Less strict filtering criteria
+        return (
+          earthquake.magnitude >= 2.0 || // Lower magnitude threshold
+          earthquake.significance >= 30 || // Lower significance threshold
+          earthquake.tsunami ||
+          earthquake.alert ||
+          (earthquake.felt && earthquake.felt > 50) // Lower felt threshold
+        );
+      })
       .sort((a: Earthquake, b: Earthquake) => {
         // Sort by significance first, then by time
         if (b.significance !== a.significance) {
@@ -79,6 +90,7 @@ export async function GET() {
         return new Date(b.time).getTime() - new Date(a.time).getTime();
       });
 
+    console.log('Filtered earthquakes:', earthquakes.length);
     return NextResponse.json(earthquakes);
   } catch (error) {
     console.error('Error fetching earthquakes:', error);
