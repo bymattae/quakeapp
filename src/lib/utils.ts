@@ -32,6 +32,25 @@ export const formatDate = (timestamp: number): string => {
   return new Date(timestamp).toLocaleString();
 };
 
+export const getCountryFlag = (countryCode: string): string => {
+  const codePoints = countryCode
+    .toUpperCase()
+    .split('')
+    .map(char => 127397 + char.charCodeAt(0));
+  return String.fromCodePoint(...codePoints);
+};
+
+export const cleanLocation = (location: string): { city: string; country: string } => {
+  // Remove any extra information after the first comma
+  const parts = location.split(',');
+  if (parts.length >= 2) {
+    const city = parts[0].trim();
+    const country = parts[1].trim();
+    return { city, country };
+  }
+  return { city: location, country: 'Unknown' };
+};
+
 export const transformUSGSData = (data: EarthquakeResponse): Earthquake[] => {
   return data.features.map(feature => {
     const { 
@@ -47,11 +66,14 @@ export const transformUSGSData = (data: EarthquakeResponse): Earthquake[] => {
     } = feature.properties;
     
     const [longitude, latitude, depth] = feature.geometry.coordinates;
+    const { city, country } = cleanLocation(place);
     
     return {
       id: feature.id,
       magnitude: mag,
-      location: place,
+      location: `${city}, ${country}`,
+      city,
+      country,
       time: time.toString(),
       coordinates: [longitude, latitude, depth],
       depth,

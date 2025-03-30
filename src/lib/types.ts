@@ -16,6 +16,8 @@ export interface Earthquake {
   id: string;
   magnitude: number;
   location: string;
+  city: string;
+  country: string;
   time: string;
   coordinates: [number, number, number];
   depth: number;
@@ -32,6 +34,11 @@ export interface Earthquake {
     code: string;
     distance: number;
     impact: 'High' | 'Medium' | 'Low';
+  }[];
+  affectedCities?: {
+    name: string;
+    impact: 'High' | 'Medium' | 'Low';
+    distance: number;
   }[];
 }
 

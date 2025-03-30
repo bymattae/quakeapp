@@ -34,7 +34,8 @@ Please provide the following information in a structured format:
 2. What areas were affected?
 3. Detailed information about the earthquake's characteristics and potential impact
 4. Analysis of impact on specific countries [Thailand, India]
-5. Analysis of impact on specific cities [Bangkok, Mumbai]
+5. Analysis of impact on specific cities [Bangkok, Manila]
+6. List of major cities affected by this earthquake, including their impact level (High/Medium/Low)
 
 Format the response in JSON with these fields:
 {
@@ -42,7 +43,13 @@ Format the response in JSON with these fields:
   "affectedAreas": "general areas affected",
   "details": "detailed characteristics",
   "affectedCountries": [{"name": "country name", "impact": "impact description"}],
-  "affectedCities": [{"name": "city name", "impact": "impact description"}]
+  "affectedCities": [
+    {
+      "name": "city name",
+      "impact": "High/Medium/Low",
+      "distance": "distance from epicenter in km"
+    }
+  ]
 }`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
