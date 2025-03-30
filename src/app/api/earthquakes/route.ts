@@ -1,24 +1,34 @@
 import { NextResponse } from 'next/server';
-import { Earthquake, USGSFeature } from '@/lib/types';
+import { Earthquake } from '@/lib/types';
+import { cleanLocation } from '@/lib/utils';
+
+interface USGSFeature {
+  id: string;
+  properties: {
+    mag: number;
+    place: string;
+    time: number;
+    sig: number;
+    tsunami: number;
+    felt: number | null;
+    cdi: number | null;
+    mmi: number | null;
+    alert: string | null;
+  };
+  geometry: {
+    coordinates: [number, number, number];
+  };
+}
 
 interface USGSResponse {
-  type: string;
-  metadata: {
-    generated: number;
-    url: string;
-    title: string;
-    status: number;
-    api: string;
-    count: number;
-  };
   features: USGSFeature[];
 }
 
 export async function GET() {
   try {
-    console.log('Fetching earthquake data...');
+    // Fetch earthquake data from USGS API
     const response = await fetch(
-      'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson'
+      'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_hour.geojson'
     );
 
     if (!response.ok) {
@@ -26,44 +36,43 @@ export async function GET() {
     }
 
     const data: USGSResponse = await response.json();
-    console.log('Successfully fetched earthquake data:', {
-      count: data.features.length,
-      metadata: data.metadata
-    });
 
     // Transform and filter the earthquake data
-    const earthquakes: Earthquake[] = data.features
-      .map(feature => ({
-        id: feature.id,
-        magnitude: feature.properties.mag,
-        location: feature.properties.place,
-        time: new Date(feature.properties.time).toISOString(),
-        coordinates: feature.geometry.coordinates,
-        depth: feature.geometry.coordinates[2],
-        significance: feature.properties.sig,
-        tsunami: feature.properties.tsunami > 0,
-        felt: feature.properties.felt,
-        cdi: feature.properties.cdi, // Community Intensity
-        mmi: feature.properties.mmi, // Modified Mercalli Intensity
-        alert: feature.properties.alert,
-      }))
-      .filter(quake => {
-        // Filter criteria for significant events:
-        // 1. Magnitude >= 2.5 (removes micro-earthquakes)
-        // 2. Significance >= 50 (USGS significance rating)
-        // 3. Or has tsunami warning
-        // 4. Or has alert level
-        // 5. Or was felt by people
-        return (
-          quake.magnitude >= 2.5 &&
-          (quake.significance >= 50 ||
-           quake.tsunami ||
-           quake.alert ||
-           (quake.felt && quake.felt > 10))
-        );
+    const earthquakes = data.features
+      .map((feature: USGSFeature) => {
+        const { mag, place, time, sig, tsunami, felt, cdi, mmi, alert } = feature.properties;
+        const [longitude, latitude, depth] = feature.geometry.coordinates;
+        const { city, country } = cleanLocation(place);
+
+        const earthquake: Earthquake = {
+          id: feature.id,
+          magnitude: mag,
+          location: `${city}, ${country}`,
+          city,
+          country,
+          time: time.toString(),
+          coordinates: [longitude, latitude, depth],
+          depth,
+          significance: sig || 0,
+          tsunami: tsunami === 1,
+          felt: felt || null,
+          cdi: cdi || null,
+          mmi: mmi || null,
+          alert: alert || null
+        };
+
+        return earthquake;
       })
-      .sort((a, b) => {
-        // Sort by significance and then by time
+      .filter((earthquake: Earthquake) => 
+        // Filter out micro-earthquakes and include only significant events
+        earthquake.magnitude >= 2.5 || 
+        earthquake.significance >= 50 ||
+        earthquake.tsunami ||
+        earthquake.alert ||
+        (earthquake.felt && earthquake.felt > 100)
+      )
+      .sort((a: Earthquake, b: Earthquake) => {
+        // Sort by significance first, then by time
         if (b.significance !== a.significance) {
           return b.significance - a.significance;
         }
