@@ -34,6 +34,8 @@ export default function EarthquakeList({ onSelect, severity = 'all', dateRange }
       const data = await response.json();
       
       if (Array.isArray(data)) {
+        console.log('Received earthquakes:', data.length);
+        console.log('Sample earthquake:', data[0]);
         setEarthquakes(data);
         setError(null);
       } else if (data.error) {
@@ -101,17 +103,33 @@ export default function EarthquakeList({ onSelect, severity = 'all', dateRange }
   };
 
   const filteredEarthquakes = earthquakes.filter(quake => {
-    // Apply severity filter
+    // Log each earthquake being filtered
+    console.log('Filtering earthquake:', {
+      id: quake.id,
+      magnitude: quake.magnitude,
+      location: quake.location,
+      time: quake.time,
+      severity: severity
+    });
+
+    // Apply severity filter only if explicitly set
     if (severity !== 'all') {
       const [min, max] = getMagnitudeRange(severity);
       if (quake.magnitude < min || quake.magnitude > max) {
+        console.log('Filtered out by severity:', quake.id);
         return false;
       }
     }
 
     // Apply date range filter
-    return isInDateRange(quake.time);
+    const inDateRange = isInDateRange(quake.time);
+    if (!inDateRange) {
+      console.log('Filtered out by date range:', quake.id);
+    }
+    return inDateRange;
   });
+
+  console.log('Filtered earthquakes count:', filteredEarthquakes.length);
 
   // Sort earthquakes by significance and time
   const sortedEarthquakes = [...filteredEarthquakes].sort((a, b) => {
@@ -159,6 +177,14 @@ export default function EarthquakeList({ onSelect, severity = 'all', dateRange }
         </svg>
         <h3 className="mt-2 text-sm font-medium text-gray-900">No earthquakes found</h3>
         <p className="mt-1 text-sm text-gray-500">Try adjusting your filters to see more results.</p>
+        <div className="mt-4 text-sm text-gray-500">
+          <p>Total earthquakes received: {earthquakes.length}</p>
+          <p>Active filters:</p>
+          <ul className="list-disc list-inside">
+            <li>Severity: {severity}</li>
+            <li>Date Range: {dateRange ? `${dateRange.start} to ${dateRange.end}` : 'None'}</li>
+          </ul>
+        </div>
       </div>
     );
   }
