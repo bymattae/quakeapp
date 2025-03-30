@@ -1,19 +1,19 @@
 import { Earthquake, EarthquakeResponse } from './types';
 
-export const getSeverity = (magnitude: number): 'minor' | 'moderate' | 'severe' => {
-  if (magnitude >= 6.0) return 'severe';
-  if (magnitude >= 4.0) return 'moderate';
+export const getSeverityLevel = (magnitude: number): 'minor' | 'moderate' | 'severe' => {
+  if (magnitude >= 7.0) return 'severe';
+  if (magnitude >= 5.5) return 'moderate';
   return 'minor';
 };
 
 export const getSeverityColor = (severity: 'minor' | 'moderate' | 'severe'): string => {
   switch (severity) {
     case 'severe':
-      return 'bg-red-500';
+      return 'bg-red-100 text-red-800';
     case 'moderate':
-      return 'bg-yellow-500';
-    case 'minor':
-      return 'bg-green-500';
+      return 'bg-yellow-100 text-yellow-800';
+    default:
+      return 'bg-green-100 text-green-800';
   }
 };
 
@@ -34,17 +34,34 @@ export const formatDate = (timestamp: number): string => {
 
 export const transformUSGSData = (data: EarthquakeResponse): Earthquake[] => {
   return data.features.map(feature => {
-    const { mag, place, time } = feature.properties;
+    const { 
+      mag, 
+      place, 
+      time, 
+      sig, 
+      tsunami, 
+      felt, 
+      cdi, 
+      mmi, 
+      alert 
+    } = feature.properties;
+    
     const [longitude, latitude, depth] = feature.geometry.coordinates;
     
     return {
       id: feature.id,
       magnitude: mag,
       location: place,
-      time: formatDate(time),
-      coordinates: [latitude, longitude],
+      time: time.toString(),
+      coordinates: [longitude, latitude, depth],
       depth,
-      severity: getSeverity(mag),
+      severity: getSeverityLevel(mag),
+      significance: sig || 0,
+      tsunami: tsunami === 1,
+      felt: felt || null,
+      cdi: cdi || null,
+      mmi: mmi || null,
+      alert: alert || null
     };
   });
 };
@@ -99,7 +116,7 @@ export function getAffectedCountries(earthquake: Earthquake) {
     .slice(0, 3); // Get the 3 closest countries
 }
 
-export function getSeverityLevel(magnitude: number): string {
+export function getMagnitudeLevel(magnitude: number): string {
   if (magnitude >= 7.0) return 'VERY HIGH';
   if (magnitude >= 6.0) return 'HIGH';
   if (magnitude >= 5.0) return 'MEDIUM';
